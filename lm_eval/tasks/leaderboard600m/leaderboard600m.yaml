@@ -3,19 +3,19 @@ group_alias: leaderboard600m
 task:
   - aquas
   - arc_ca_aina
-  - bec2016eu
+  # - bec2016eu
   # - belebele_cat_Latn
   # - belebele_eus_Latn
   - belebele_glg_Latn
   # - belebele_spa_Latn
   - bertaqa_eu
-  - bhtc_v2
+  # - bhtc_v2
   - cabreu
   - catalanqa
   - catcola
   - coqcat
   - copa_ca
-  - epec_koref_bin
+  # - epec_koref_bin
   - escola
   - eus_exams_eu
   - eus_proficiency
@@ -40,15 +40,15 @@ task:
   - paws_gl
   - phrases_va
   - piqa_ca
-  - qnlieu
+  # - qnlieu
   - ragquas
   - siqa_ca
   - summarization_gl
   - teca
   - teleia
   - truthfulqa_gl
-  - vaxx_stance
-  - wiceu
+  # - vaxx_stance
+  # - wiceu
   # - wnli_ca
   # - wnli_es
   # - wnli_eu
