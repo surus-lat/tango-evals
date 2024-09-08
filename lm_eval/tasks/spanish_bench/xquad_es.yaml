@@ -5,7 +5,7 @@ output_type: generate_until
 doc_to_text: "Contexto: {{context}}\n\nPregunta: {{question}}\n\nRespuesta:"
 doc_to_target: '{{answers["text"][0]}}'
 validation_split: validation
-target_delimiter: ' '
+target_delimiter: " "
 process_results: !function utils.process_results_qa
 generation_kwargs:
   until:
@@ -19,5 +19,7 @@ metric_list:
   - metric: f1
     aggregation: mean
     higher_is_better: true
+dataset_kwargs:
+  trust_remote_code: true
 metadata:
   version: 1.0
