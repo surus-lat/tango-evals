@@ -1,5 +1,5 @@
 group: laleaderboard_gl
-tasks:
+task:
   - belebele_glg_Latn
   # - flores_gl
   - galcola
