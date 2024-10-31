@@ -5,6 +5,7 @@ fewshot_split: null
 num_fewshot: 1
 doc_to_text: "Responde a la pregunta utilizando únicamente el contexto proporcionado.\n\nContexto:\n{{context}}\n\nPregunta:\n{{question}}\n\nRespuesta:\n"
 doc_to_target: "{{answer}}"
+num_fewshot: 1
 metric_list:
   - metric: sas_encoder
     model_name_or_path: "BAAI/bge-m3"
