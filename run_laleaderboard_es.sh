@@ -1,64 +1,84 @@
 #!/usr/bin/env bash
 ###############################################################################
-# Sequentially run every sub-task contained in
-#   lm_eval/tasks/laleaderboard/laleaderboard_es.yaml
-# If a task crashes, the script prints an error message and continues
-# with the next task.  Each finished task leaves a
-#   ../tango-evals/<model-name-sanitised>/results_<timestamp>.json
-# file on disk, so partial progress is never lost.
-#
-# Requirements:
-#   – GNU bash 4+
-#   – yq (https://github.com/mikefarah/yq) for parsing YAML    (brew install yq | apt-get install yq)
+# Sequential runner for all sub-tasks in lm_eval/tasks/laleaderboard_es.yaml
+#  • No external yq / jq binaries required
+#  • Skips tasks whose results_*json already exist (easy resume)
+#  • Writes per-task logs to ./logs/
 ###############################################################################
 
-set -Eeuo pipefail            # fail fast, catch undefined vars, propagate errors
-IFS=$'\n\t'                   # safer word splitting
+set -Eeuo pipefail
+IFS=$'\n\t'
 
+# ───── User-editable section ────────────────────────────────────────────────
 MODEL_ARGS='pretrained=sandbox-ai/Llama-3.1-Tango-70b-bnb_4b,parallelize=True,load_in_4bit=True'
-BASE_CMD=(lm_eval --model hf --device cuda --batch_size 1 --max_batch_size 1 \
-          --output_path "../tango-evals")
+OUTPUT_DIR="../tango-evals"        # where result files should be stored
+DEVICE="cuda"                      # or "cpu"
+BATCH_SIZE=1
+MAX_BATCH_SIZE=1
+# ────────────────────────────────────────────────────────────────────────────
 
-YAML_FILE="lm_eval/tasks/laleaderboard/laleaderboard_es.yaml"
+ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+YAML_FILE="${ROOT_DIR}/lm_eval/tasks/laleaderboard/laleaderboard_es.yaml"
+ABS_OUTPUT_DIR="$( realpath "${OUTPUT_DIR}" )"
+mkdir -p "${ROOT_DIR}/logs"
 
-# --------------------------------------------------------------------------------
-# 1. Read the YAML and build two arrays: TASK_NAME[i], FEWSHOT[i]
-# --------------------------------------------------------------------------------
-mapfile -t TASK_NAME  < <(yq e '.task[].task'        "$YAML_FILE")
-mapfile -t FEWSHOT_CT < <(yq e '.task[].num_fewshot' "$YAML_FILE")
+# ───── 1.  Read YAML with Python                                               
+readarray -t TASK_LINES < <(
+python - <<'PY' "${YAML_FILE}"
+import sys, yaml
+data = yaml.safe_load(open(sys.argv[1]))
+for entry in data["task"]:
+    # output:  taskname|fewshot
+    print(f"{entry['task']}|{entry.get('num_fewshot', 0)}")
+PY
+)
 
-echo "Found ${#TASK_NAME[@]} sub-tasks in ${YAML_FILE}"
+echo "Found ${#TASK_LINES[@]} sub-tasks in $(realpath "${YAML_FILE}")"
+echo "Results will be kept under ${ABS_OUTPUT_DIR}"
 echo
 
-# --------------------------------------------------------------------------------
-# 2. Loop through tasks
-# --------------------------------------------------------------------------------
-for idx in "${!TASK_NAME[@]}"; do
-    task="${TASK_NAME[$idx]}"
-    fewshot="${FEWSHOT_CT[$idx]}"
-    log_file="logs/${task}_$(date +%Y%m%d_%H%M%S).log"
-    mkdir -p logs                       # keep individual logs
+# ───── 2.  Loop through tasks                                                 
+SUCCESS=0; FAIL=0
+for line in "${TASK_LINES[@]}"; do
+    task="${line%%|*}"          # text before |
+    fewshot="${line##*|}"       # text after  |
 
+    # Skip if results already exist
+    if compgen -G "${ABS_OUTPUT_DIR}/*/results_*${task}*.json" >/dev/null; then
+        echo "⏭️  Skipping ${task} – results already present"
+        continue
+    fi
+
+    log_file="${ROOT_DIR}/logs/${task}_$(date +%Y%m%d_%H%M%S).log"
     echo "=================================================================="
-    echo "▶  Starting task: ${task}     (few-shot = ${fewshot})"
+    echo "▶  Starting ${task}  (few-shot=${fewshot})"
     echo "   Log: ${log_file}"
     echo "=================================================================="
 
-    # Run the harness
-    if "${BASE_CMD[@]}" \
-           --model_args "${MODEL_ARGS}" \
-           --tasks "${task}" \
-           --num_fewshot "${fewshot}" \
-           2>&1 | tee "${log_file}"; then
-        echo "✅  Task ${task} finished OK"
+    if lm_eval \
+        --model hf \
+        --model_args "${MODEL_ARGS}" \
+        --tasks "${task}" \
+        --num_fewshot "${fewshot}" \
+        --device "${DEVICE}" \
+        --batch_size "${BATCH_SIZE}" \
+        --max_batch_size "${MAX_BATCH_SIZE}" \
+        --output_path "${ABS_OUTPUT_DIR}" 2>&1 | tee "${log_file}"
+    then
+        echo "✅  ${task} completed"
+        ((SUCCESS++))
     else
         rc=$?
-        echo "❌  Task ${task} FAILED with exit code ${rc}.  Check ${log_file}"
+        echo "❌  ${task} FAILED (exit ${rc})"
+        ((FAIL++))
     fi
-
     echo
 done
 
-echo "=========================================="
-echo "All subtasks attempted."
-echo "Aggregated result files now live in ../tango-evals/<model-name>/*"
+# ───── 3.  Summary                                                          
+echo "=========================== SUMMARY ==========================="
+printf "Succeeded : %d\n" "${SUCCESS}"
+printf "Failed    : %d\n" "${FAIL}"
+echo "Results dir: ${ABS_OUTPUT_DIR}"
+echo "Logs       : ${ROOT_DIR}/logs/"
+echo "================================================================"
