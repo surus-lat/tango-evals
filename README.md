@@ -1,6 +1,6 @@
 # Tango Evals
 
-Repositorio para reproducir las evaluaciones de *laleaderboard* con el modelo (**Tango-70b**)[https://tangoia.com].
+Repositorio para reproducir las evaluaciones de *laleaderboard* con el modelo [**Tango-70b**](https://tangoia.com).
 
 
 ## Quick-start
