@@ -11,7 +11,7 @@ IFS=$'\n\t'
 
 # ───── User-editable section ────────────────────────────────────────────────
 MODEL_ARGS='pretrained=sandbox-ai/Llama-3.1-Tango-70b-bnb_4b,parallelize=True,load_in_4bit=True'
-OUTPUT_DIR="../tango-evals"        # where result files should be stored
+OUTPUT_DIR="./tango-evals"        # where result files should be stored
 DEVICE="cuda"                      # or "cpu"
 BATCH_SIZE=1
 MAX_BATCH_SIZE=1
@@ -66,11 +66,11 @@ for line in "${TASK_LINES[@]}"; do
         --output_path "${ABS_OUTPUT_DIR}" 2>&1 | tee "${log_file}"
     then
         echo "✅  ${task} completed"
-        ((SUCCESS++))
+        ((SUCCESS+=1))
     else
         rc=$?
         echo "❌  ${task} FAILED (exit ${rc})"
-        ((FAIL++))
+        ((FAIL+=1))
     fi
     echo
 done
