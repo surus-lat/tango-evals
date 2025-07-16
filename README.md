@@ -348,6 +348,8 @@ Repositorio para reproducir las evaluaciones de *laleaderboard* con el modelo [*
 
 
 
+### Resultantes del proceso de evaluación (`.json` y `.log`)
+Podés encontrar los resultados del proceso de evaluación en `./tango-evals` y en `./logs` 
 
 ## Reproducir los resultados
 
@@ -357,10 +359,9 @@ Repositorio para reproducir las evaluaciones de *laleaderboard* con el modelo [*
    source .venv/bin/activate
    ```
 
-2. Instalá dependencias y el harness en modo *editable*:
+2. Instalá dependencias de lm-evaluation-harness en modo *editable*:
 
    ```bash
-   pip install -r requirements.txt
    pip install -e .
    ```
 
